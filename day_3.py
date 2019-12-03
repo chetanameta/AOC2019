@@ -6,48 +6,48 @@ def manhattan_distance(x, y):
 
 
 def get_result(data):
-    origX = 0
-    origY = 0
+    orig_x = 0
+    orig_y = 0
     second = False
     cordinates = {}
     min_distance = sys.maxsize
     steps_completed = sys.maxsize
     for lst in data:
 
-        curX = 0
-        curY = 0
+        cur_x = 0
+        cur_y = 0
         steps = 0
         for str in lst:
             move = int(str[1::])
             if str[0] == 'R':
-                dirX = 1
-                dirY = 0
+                dir_x = 1
+                dir_y = 0
             elif str[0] == 'L':
-                dirX = -1
-                dirY = 0
+                dir_x = -1
+                dir_y = 0
             elif str[0] == 'U':
-                dirX = 0
-                dirY = 1
+                dir_x = 0
+                dir_y = 1
             elif str[0] == 'D':
-                dirX = 0
-                dirY = -1
+                dir_x = 0
+                dir_y = -1
             while move > 0:
-                curX += dirX
-                curY += dirY
+                cur_x += dir_x
+                cur_y += dir_y
                 steps += 1
                 move = move - 1
 
-                if second is True and (curX, curY) in cordinates and cordinates[(curX, curY)] != (0, 0):
-                    dist = manhattan_distance((origX, origY), (curX, curY))
+                if second is True and (cur_x, cur_y) in cordinates and cordinates[(cur_x, cur_y)] != (0, 0):
+                    dist = manhattan_distance((orig_x, orig_y), (cur_x, cur_y))
                     # part 2
-                    if dist != 0 and (curX, curY) in cordinates and (
-                            steps + cordinates[(curX, curY)]) < steps_completed:
-                        steps_completed = steps + cordinates[(curX, curY)]
+                    if dist != 0 and (cur_x, cur_y) in cordinates and (
+                            steps + cordinates[(cur_x, cur_y)]) < steps_completed:
+                        steps_completed = steps + cordinates[(cur_x, cur_y)]
                     # part 1
                     if dist != 0 and dist < min_distance:
                         min_distance = dist
                 if second is False:
-                    cordinates[(curX, curY)] = steps
+                    cordinates[(cur_x, cur_y)] = steps
         second = True
     return min_distance, steps_completed
 
