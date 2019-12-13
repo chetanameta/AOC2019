@@ -1,16 +1,19 @@
 import pandas as pd
+import copy
+import numpy as np
 from itertools import combinations
 
 
 class Space:
-    def __init__(self, coordinates, steps=0, check_first_position=False):
-        self.coordinates = self._get_cordinates(coordinates)
-        self.first_coordinates = self._get_cordinates(coordinates)
+    def __init__(self, coordinates, steps=0):
+        self.coordinates = coordinates
+        self.first_coordinates = copy.deepcopy(coordinates)
         self.steps = steps
-        self.moons = coordinates.keys()
-        self.axis = list(self.coordinates.keys())
-        self.check_first_position = check_first_position
+        self.moons = list(coordinates.keys())
+        self.axis = list(self.coordinates[self.moons[0]]['position'].keys())
         self.counter = 0
+        self.roundtrip = {'x': 0, 'y': 0, 'z': 0}
+        self.total_energy = 0
 
     def _get_cordinates(self, dic):
         return pd.DataFrame.from_dict(
@@ -20,61 +23,76 @@ class Space:
             orient='index'
         )
 
-    def run(self):
-        print(self.coordinates)
-        combination = self._get_combinations()
-        while True:
-            for moon1, moon2 in combination:
-                self._time_step(moon1, moon2)
-            self._change_position()
-            if self.check_first_position is True:
-                self.counter += 1
-                if self.coordinates.equals(self.first_coordinates):
-                    break
-            else:
-                self.counter += 1
-                if self.counter == self.steps:
-                    break
-            print(self.counter)
-
-        print(self.coordinates)
-
-    def get_total_steps(self):
-        return self.counter
+    def _get_divident(self, n1, n2):
+        r = 1
+        while r > 0:
+            r = n1 % n2
+            n1 = n2
+            n2 = r
+        return n1
 
     def _time_step(self, moon1, moon2):
-        self.change_valocity(moon1, moon2)
+        self._change_valocity(moon1, moon2)
 
     def _get_combinations(self):
         return list(combinations(self.moons, 2))
 
-    def change_valocity(self, moon1, moon2):
+    def _change_valocity(self, moon1, moon2):
+
         for i in self.axis:
-            if self.coordinates[i][moon1]['position'] == self.coordinates[i][moon2]['position']:
+            if self.coordinates[moon1]['position'][i] == self.coordinates[moon2]['position'][i]:
                 moon1_move = 0
             else:
-                moon1_move = 1 if self.coordinates[i][moon1]['position'] < self.coordinates[i][moon2][
-                    'position'] else -1
+                moon1_move = 1 if self.coordinates[moon1]['position'][i] < self.coordinates[moon2][
+                    'position'][i] else -1
             moon2_move = -1 * moon1_move
-            self.coordinates.loc[moon1, 'velocity'][i] = self.coordinates[i][moon1]['velocity'] + moon1_move
-            self.coordinates.loc[moon2, 'velocity'][i] = self.coordinates[i][moon2]['velocity'] + moon2_move
+            self.coordinates[moon1]['velocity'][i] += moon1_move
+            self.coordinates[moon2]['velocity'][i] += moon2_move
 
     def _change_position(self):
         for moon in self.moons:
-            self.coordinates.loc[moon, 'position'] = self.coordinates.loc[moon, 'velocity'] + self.coordinates.loc[
-                moon, 'position']
+            for i in self.axis:
+                self.coordinates[moon]['position'][i] += self.coordinates[moon]['velocity'][i]
 
     def _set_energies(self):
-        self.coordinates['energy'] = self.coordinates[self.axis].abs().sum(axis=1)
-
-    def get_total_energy(self):
-        self._set_energies()
+        coordinates = self._get_cordinates(self.coordinates)
+        coordinates['energy'] = coordinates[self.axis].abs().sum(axis=1)
         total_energy = 0
         for moon in self.moons:
-            kinetic_energy = self.coordinates['energy'][moon]['velocity']
-            potential_energy = self.coordinates['energy'][moon]['position']
+            kinetic_energy = coordinates['energy'][moon]['velocity']
+            potential_energy = coordinates['energy'][moon]['position']
             total_energy += kinetic_energy * potential_energy
-        return total_energy
+        self.total_energy = total_energy
+
+    def run(self):
+        combination = self._get_combinations()
+        while True:
+            self.counter += 1
+            for moon1, moon2 in combination:
+                self._time_step(moon1, moon2)
+            self._change_position()
+            for dim in self.axis:
+                if self.roundtrip[dim] == 0:
+                    repeat = 0
+                    for moon in self.moons:
+                        if self.coordinates[moon]['velocity'][dim] == 0 and self.coordinates[moon]['position'][dim] == \
+                                self.first_coordinates[moon]['position'][dim]:
+                            repeat += 1
+                    if repeat == len(self.moons):
+                        self.roundtrip[dim] = self.counter
+
+            if self.counter > self.steps and 0 not in list(self.roundtrip.values()):
+                break
+            if self.counter == self.steps:
+                self._set_energies()
+
+    def get_total_energy(self):
+        return self.total_energy
+
+    def get_total_steps_roundtrip(self):
+        return (self.roundtrip['x'] / self._get_divident(self.roundtrip['x'], self.roundtrip['y'])) * \
+               (self.roundtrip['y'] / self._get_divident(self.roundtrip['x'], self.roundtrip['z'])) * \
+               (self.roundtrip['z'] / self._get_divident(self.roundtrip['z'], self.roundtrip['y'])) * 2
 
 
 # main
@@ -97,30 +115,11 @@ dic = {
     }
 }
 
-# other
-dic_test = {
-    'io': {
-        'position': {'x': -1, 'y': 0, 'z': 2},
-        'velocity': {'x': 0, 'y': 0, 'z': 0}
-    },
-    'europa': {
-        'position': {'x': 2, 'y': -10, 'z': -7},
-        'velocity': {'x': 0, 'y': 0, 'z': 0}
-    },
-    'ganymede': {
-        'position': {'x': 4, 'y': -8, 'z': 8},
-        'velocity': {'x': 0, 'y': 0, 'z': 0}
-    },
-    'callisto': {
-        'position': {'x': 3, 'y': 5, 'z': -1},
-        'velocity': {'x': 0, 'y': 0, 'z': 0}
-    }
-}
 
-obj = Space(dic, steps=0, check_first_position=True)
+obj = Space(dic, steps=1000)
 
 obj.run()
 
 # part 1
-# print(obj.get_total_energy())
-print(obj.get_total_steps())
+print("Total Energy: ", str(obj.get_total_energy()))
+print("History repeats itself after steps: ", str(obj.get_total_steps_roundtrip()))
