@@ -11,10 +11,18 @@ class Computer:
         self.state = "INITIALIZED"
         self.relative_base = 0
 
+    def copy(self):
+        c = Computer(self.code, self.program_input.copy())
+        c.set_relative_base = self.relative_base
+        c.state = self.state
+        c.ptr = self.ptr
+        c.program_output = self.program_output.copy()
+        return c
+
     def run(self):
         while (True):
             self.state = "RUNNING"
-            [opcode, modes] = evaluate_instruction(self.code[self.ptr])
+            [opcode, modes] = self.evaluate_instruction(self.code[self.ptr])
             if (opcode == 99):
                 self.state = "TERMINATED"
                 return
@@ -119,18 +127,16 @@ class Computer:
     def get_state(self):
         return self.state
 
-
-def evaluate_instruction(instruction):
-    opcode_low = instruction % 10
-    instruction = int(instruction / 10)
-    opcode_high = instruction % 10
-    opcode = opcode_high * 10 + opcode_low
-    instruction = int(instruction / 10)
-
-    modes = []
-    while (instruction > 0):
-        modes.append(instruction % 10)
+    def evaluate_instruction(self, instruction):
+        opcode_low = instruction % 10
+        instruction = int(instruction / 10)
+        opcode_high = instruction % 10
+        opcode = opcode_high * 10 + opcode_low
         instruction = int(instruction / 10)
 
-    return [opcode, modes]
+        modes = []
+        while (instruction > 0):
+            modes.append(instruction % 10)
+            instruction = int(instruction / 10)
 
+        return [opcode, modes]
